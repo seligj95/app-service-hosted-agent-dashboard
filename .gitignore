@@ -42,6 +42,9 @@ local.settings.json
 .DS_Store
 Thumbs.db
 
+# Internal docs
+docs/summary.md
+
 # Demo app artifacts
 travel-plan-worker.zip
 blog.md
