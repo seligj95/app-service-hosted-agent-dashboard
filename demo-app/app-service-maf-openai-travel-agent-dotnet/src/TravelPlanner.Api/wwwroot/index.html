@@ -646,8 +646,12 @@
             
             const formattedResponse = agentResponse
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-                .replace(/##\s*(.*?)$/gm, '<h3 style="color: #667eea; margin-top: 24px; margin-bottom: 12px;">$1</h3>') // H2 headers
-                .replace(/###\s*(.*?)$/gm, '<h4 style="color: #555; margin-top: 20px; margin-bottom: 10px;">$1</h4>') // H3 headers
+                .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
+                .replace(/^###\s*(.*?)$/gm, '<h4 style="color: #555; margin-top: 20px; margin-bottom: 10px;">$1</h4>') // H3 headers
+                .replace(/^##\s*(.*?)$/gm, '<h3 style="color: #667eea; margin-top: 24px; margin-bottom: 12px;">$1</h3>') // H2 headers
+                .replace(/^#\s*(.*?)$/gm, '<h2 style="color: #667eea; margin-top: 28px; margin-bottom: 14px;">$1</h2>') // H1 headers
+                .replace(/^[-•]\s*(.*?)$/gm, '<li style="margin-bottom: 6px;">$1</li>') // List items
+                .replace(/((?:<li[^>]*>.*?<\/li>\s*)+)/g, '<ul style="padding-left: 20px; margin: 10px 0;">$1</ul>') // Wrap consecutive list items
                 .replace(/---/g, '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0;">') // Horizontal rules
                 .replace(/\n\n/g, '<br><br>') // Paragraph breaks
                 .replace(/\n/g, '<br>'); // Line breaks
