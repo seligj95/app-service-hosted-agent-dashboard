@@ -80,7 +80,19 @@ app.Run();
 
 Then open `/agents/dashboard` in your browser.
 
-See the [package README](src/Azure.AppService.AgentDashboard/README.md) for full documentation on agent tagging, topology, cross-process telemetry, configuration options, and API endpoints.
+## API endpoints
+
+All endpoints are under the configured route prefix (default: `/agents`):
+
+| Endpoint | Description |
+|---|---|
+| `GET /agents/dashboard` | Embedded HTML dashboard UI |
+| `GET /agents/api/registry` | List of all registered and discovered agents |
+| `GET /agents/api/metrics` | Aggregate and per-agent metrics (invocations, latency, tokens, errors) |
+| `GET /agents/api/traces?limit=50&agent=MyAgent` | Recent invocation events, optionally filtered by agent |
+| `GET /agents/api/topology` | Agent topology graph (configured or auto-generated) |
+
+See the [package README](src/Azure.AppService.AgentDashboard/README.md) for full documentation on agent tagging, topology, cross-process telemetry, configuration options, and more.
 
 ## Running the demo app
 
