@@ -209,28 +209,39 @@
                 const p95 = agents.map(a => a.p95LatencyMs);
 
                 // Invocations chart
-                if (invChart) invChart.destroy();
-                const ctx1 = document.getElementById('invocationsChart').getContext('2d');
-                invChart = new Chart(ctx1, {
-                    type: 'bar',
-                    data: { labels, datasets: [{ label: 'Invocations', data: invocations, backgroundColor: '#3b82f6' }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Invocations by Agent' } } }
-                });
+                if (invChart) {
+                    invChart.data.labels = labels;
+                    invChart.data.datasets[0].data = invocations;
+                    invChart.update('none');
+                } else {
+                    const ctx1 = document.getElementById('invocationsChart').getContext('2d');
+                    invChart = new Chart(ctx1, {
+                        type: 'bar',
+                        data: { labels, datasets: [{ label: 'Invocations', data: invocations, backgroundColor: '#3b82f6' }] },
+                        options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false }, title: { display: true, text: 'Invocations by Agent' } } }
+                    });
+                }
 
                 // Latency chart
-                if (latChart) latChart.destroy();
-                const ctx2 = document.getElementById('latencyChart').getContext('2d');
-                latChart = new Chart(ctx2, {
-                    type: 'bar',
-                    data: {
-                        labels,
-                        datasets: [
-                            { label: 'Avg Latency (ms)', data: agents.map(a => a.avgLatencyMs), backgroundColor: '#8b5cf6' },
-                            { label: 'P95 Latency (ms)', data: p95, backgroundColor: '#f97316' }
-                        ]
-                    },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Latency by Agent (ms)' } } }
-                });
+                if (latChart) {
+                    latChart.data.labels = labels;
+                    latChart.data.datasets[0].data = agents.map(a => a.avgLatencyMs);
+                    latChart.data.datasets[1].data = p95;
+                    latChart.update('none');
+                } else {
+                    const ctx2 = document.getElementById('latencyChart').getContext('2d');
+                    latChart = new Chart(ctx2, {
+                        type: 'bar',
+                        data: {
+                            labels,
+                            datasets: [
+                                { label: 'Avg Latency (ms)', data: agents.map(a => a.avgLatencyMs), backgroundColor: '#8b5cf6' },
+                                { label: 'P95 Latency (ms)', data: p95, backgroundColor: '#f97316' }
+                            ]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { title: { display: true, text: 'Latency by Agent (ms)' } } }
+                    });
+                }
 
                 // Metrics table
                 let html = '<table class="traces-table"><thead><tr><th>Agent</th><th>Invocations</th><th>Avg Latency</th><th>P95 Latency</th><th>Errors</th><th>Error Rate</th><th>Tokens</th></tr></thead><tbody>';
