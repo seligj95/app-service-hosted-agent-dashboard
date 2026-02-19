@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agent Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f0f2f5; color: #333; }
+        .header { background: #1b2a4a; color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; }
+        .header h1 { font-size: 20px; font-weight: 600; }
+        .header-right { display: flex; align-items: center; gap: 16px; font-size: 13px; }
+        .uptime { color: #8bb4e0; }
+        .auto-refresh { display: flex; align-items: center; gap: 6px; }
+        .auto-refresh label { color: #ccc; cursor: pointer; }
+        .toggle { position: relative; width: 36px; height: 20px; }
+        .toggle input { opacity: 0; width: 0; height: 0; }
+        .toggle .slider { position: absolute; cursor: pointer; inset: 0; background: #555; border-radius: 20px; transition: .3s; }
+        .toggle .slider:before { content: ''; position: absolute; height: 14px; width: 14px; left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s; }
+        .toggle input:checked + .slider { background: #4caf50; }
+        .toggle input:checked + .slider:before { transform: translateX(16px); }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        .card { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; overflow: hidden; }
+        .card-header { padding: 14px 20px; border-bottom: 1px solid #e8e8e8; font-weight: 600; font-size: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .card-body { padding: 20px; }
+        .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+        .summary-card { background: white; border-radius: 8px; padding: 16px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); text-align: center; }
+        .summary-card .label { font-size: 12px; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+        .summary-card .value { font-size: 28px; font-weight: 700; margin-top: 4px; color: #1b2a4a; }
+        .summary-card .value.error { color: #e53935; }
+        .chart-container { position: relative; height: 280px; }
+        #topology-diagram { text-align: center; padding: 10px; }
+        .traces-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .traces-table th { text-align: left; padding: 10px 12px; background: #f5f7fa; border-bottom: 2px solid #e0e0e0; font-weight: 600; color: #555; }
+        .traces-table td { padding: 10px 12px; border-bottom: 1px solid #eee; }
+        .traces-table tr.success td:first-child { border-left: 3px solid #4caf50; }
+        .traces-table tr.error td:first-child { border-left: 3px solid #e53935; }
+        .traces-table tr:hover { background: #f9f9fb; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+        .badge-success { background: #e8f5e9; color: #2e7d32; }
+        .badge-error { background: #ffebee; color: #c62828; }
+        .error-indicator { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+        .error-low { background: #4caf50; }
+        .error-mid { background: #ff9800; }
+        .error-high { background: #e53935; }
+        .filter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .filter-row select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+        .expandable { cursor: pointer; }
+        .expand-detail { display: none; padding: 8px 12px; background: #fafafa; border-bottom: 1px solid #eee; font-size: 12px; color: #666; }
+        .expand-detail.open { display: table-row; }
+        .no-data { text-align: center; padding: 40px; color: #999; font-size: 14px; }
+        .metrics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media (max-width: 768px) { .metrics-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Agent Dashboard</h1>
+        <div class="header-right">
+            <span class="uptime" id="uptime"></span>
+            <div class="auto-refresh">
+                <label class="toggle">
+                    <input type="checkbox" id="autoRefreshToggle" checked>
+                    <span class="slider"></span>
+                </label>
+                <label for="autoRefreshToggle">Auto-refresh</label>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Topology -->
+        <div class="card">
+            <div class="card-header">Agent Topology</div>
+            <div class="card-body">
+                <div id="topology-diagram"></div>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="label">Total Invocations</div>
+                <div class="value" id="totalInvocations">—</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Total Tokens</div>
+                <div class="value" id="totalTokens">—</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Error Rate</div>
+                <div class="value" id="overallErrorRate">—</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">Avg Latency</div>
+                <div class="value" id="avgLatency">—</div>
+            </div>
+        </div>
+
+        <!-- Metrics -->
+        <div class="card">
+            <div class="card-header">Per-Agent Metrics</div>
+            <div class="card-body">
+                <div class="metrics-grid">
+                    <div class="chart-container"><canvas id="invocationsChart"></canvas></div>
+                    <div class="chart-container"><canvas id="latencyChart"></canvas></div>
+                </div>
+                <div id="metricsTable" style="margin-top:16px;"></div>
+            </div>
+        </div>
+
+        <!-- Traces -->
+        <div class="card">
+            <div class="card-header">
+                <span>Recent Traces</span>
+                <div class="filter-row">
+                    <select id="agentFilter"><option value="">All Agents</option></select>
+                    <select id="limitFilter">
+                        <option value="25">25</option>
+                        <option value="50" selected>50</option>
+                        <option value="100">100</option>
+                        <option value="200">200</option>
+                    </select>
+                </div>
+            </div>
+            <div class="card-body" style="padding:0;">
+                <div id="tracesContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'loose' });
+
+        const BASE = window.location.pathname.replace(/\/dashboard\/?$/, '');
+        let invChart = null, latChart = null;
+        let refreshTimer = null;
+
+        // --- Formatters ---
+        function fmtNum(n) { return n != null ? n.toLocaleString() : '—'; }
+        function fmtPct(n) { return n != null ? (n * 100).toFixed(1) + '%' : '—'; }
+        function fmtMs(n) { return n != null ? n.toFixed(0) + ' ms' : '—'; }
+        function fmtTime(ts) {
+            const d = new Date(ts);
+            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        }
+        function fmtUptime(since) {
+            const diff = Date.now() - new Date(since).getTime();
+            const hrs = Math.floor(diff / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            return `Uptime: ${hrs}h ${mins}m`;
+        }
+        function errorClass(rate) { return rate > 0.1 ? 'error-high' : rate > 0.01 ? 'error-mid' : 'error-low'; }
+
+        // --- Topology ---
+        function sanitizeId(name) { return name.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+        async function loadTopology() {
+            try {
+                const res = await fetch(`${BASE}/api/topology`);
+                const data = await res.json();
+                const el = document.getElementById('topology-diagram');
+
+                if (!data.phases || data.phases.length === 0) {
+                    el.innerHTML = '<div class="no-data">No topology configured. Agents will appear as they are discovered.</div>';
+                    return;
+                }
+
+                let graph = 'graph LR\n';
+                data.phases.forEach((phase, i) => {
+                    const phaseId = sanitizeId(phase.name);
+                    graph += `  subgraph ${phaseId}["${phase.name}"]\n`;
+                    phase.agents.forEach(a => { graph += `    ${sanitizeId(a)}["${a}"]\n`; });
+                    graph += '  end\n';
+                });
+                data.phases.forEach(phase => {
+                    if (phase.nextPhases) {
+                        phase.nextPhases.forEach(next => {
+                            graph += `  ${sanitizeId(phase.name)} --> ${sanitizeId(next)}\n`;
+                        });
+                    }
+                });
+
+                el.innerHTML = `<pre class="mermaid">${graph}</pre>`;
+                await mermaid.run({ nodes: el.querySelectorAll('.mermaid') });
+            } catch (e) {
+                document.getElementById('topology-diagram').innerHTML = '<div class="no-data">Failed to load topology.</div>';
+            }
+        }
+
+        // --- Metrics ---
+        async function loadMetrics() {
+            try {
+                const res = await fetch(`${BASE}/api/metrics`);
+                const data = await res.json();
+
+                document.getElementById('totalInvocations').textContent = fmtNum(data.totalInvocations);
+                document.getElementById('totalTokens').textContent = fmtNum(data.totalTokens);
+                document.getElementById('overallErrorRate').textContent = fmtPct(data.overallErrorRate);
+                document.getElementById('overallErrorRate').className = 'value' + (data.overallErrorRate > 0.05 ? ' error' : '');
+                document.getElementById('avgLatency').textContent = fmtMs(data.avgLatencyMs);
+                document.getElementById('uptime').textContent = fmtUptime(data.uptime);
+
+                const agents = (data.agents || []);
+                const labels = agents.map(a => a.agentName);
+                const invocations = agents.map(a => a.invocationCount);
+                const p95 = agents.map(a => a.p95LatencyMs);
+
+                // Invocations chart
+                if (invChart) invChart.destroy();
+                const ctx1 = document.getElementById('invocationsChart').getContext('2d');
+                invChart = new Chart(ctx1, {
+                    type: 'bar',
+                    data: { labels, datasets: [{ label: 'Invocations', data: invocations, backgroundColor: '#3b82f6' }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Invocations by Agent' } } }
+                });
+
+                // Latency chart
+                if (latChart) latChart.destroy();
+                const ctx2 = document.getElementById('latencyChart').getContext('2d');
+                latChart = new Chart(ctx2, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [
+                            { label: 'Avg Latency (ms)', data: agents.map(a => a.avgLatencyMs), backgroundColor: '#8b5cf6' },
+                            { label: 'P95 Latency (ms)', data: p95, backgroundColor: '#f97316' }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Latency by Agent (ms)' } } }
+                });
+
+                // Metrics table
+                let html = '<table class="traces-table"><thead><tr><th>Agent</th><th>Invocations</th><th>Avg Latency</th><th>P95 Latency</th><th>Errors</th><th>Error Rate</th><th>Tokens</th></tr></thead><tbody>';
+                agents.forEach(a => {
+                    html += `<tr>
+                        <td>${esc(a.agentName)}</td>
+                        <td>${fmtNum(a.invocationCount)}</td>
+                        <td>${fmtMs(a.avgLatencyMs)}</td>
+                        <td>${fmtMs(a.p95LatencyMs)}</td>
+                        <td>${a.errorCount}</td>
+                        <td><span class="error-indicator ${errorClass(a.errorRate)}"></span>${fmtPct(a.errorRate)}</td>
+                        <td>${fmtNum(a.totalTokens)}</td>
+                    </tr>`;
+                });
+                html += '</tbody></table>';
+                document.getElementById('metricsTable').innerHTML = agents.length > 0 ? html : '<div class="no-data">No metrics yet.</div>';
+
+            } catch (e) {
+                console.error('Failed to load metrics', e);
+            }
+        }
+
+        // --- Traces ---
+        async function loadTraces() {
+            const agent = document.getElementById('agentFilter').value;
+            const limit = document.getElementById('limitFilter').value;
+            const params = new URLSearchParams({ limit });
+            if (agent) params.set('agent', agent);
+
+            try {
+                const res = await fetch(`${BASE}/api/traces?${params}`);
+                const data = await res.json();
+
+                if (data.length === 0) {
+                    document.getElementById('tracesContainer').innerHTML = '<div class="no-data">No traces recorded yet. Make some agent calls!</div>';
+                    return;
+                }
+
+                let html = '<table class="traces-table"><thead><tr><th>Time</th><th>Agent</th><th>Model</th><th>Duration</th><th>Tokens (In/Out)</th><th>Status</th><th>Tools</th></tr></thead><tbody>';
+                data.forEach((evt, i) => {
+                    const durMs = parseDuration(evt.duration);
+                    const cls = evt.success ? 'success' : 'error';
+                    html += `<tr class="${cls} expandable" onclick="toggleDetail('detail-${i}')">
+                        <td>${fmtTime(evt.timestamp)}</td>
+                        <td>${esc(evt.agentName)}</td>
+                        <td>${esc(evt.modelId || '—')}</td>
+                        <td>${fmtMs(durMs)}</td>
+                        <td>${fmtNum(evt.inputTokens)} / ${fmtNum(evt.outputTokens)}</td>
+                        <td><span class="badge ${evt.success ? 'badge-success' : 'badge-error'}">${evt.success ? 'OK' : 'Error'}</span></td>
+                        <td>${evt.toolsUsed ? evt.toolsUsed.map(t => esc(t)).join(', ') : '—'}</td>
+                    </tr>`;
+                    if (!evt.success && evt.errorMessage) {
+                        html += `<tr id="detail-${i}" class="expand-detail"><td colspan="7"><strong>Error:</strong> ${esc(evt.errorMessage)}</td></tr>`;
+                    }
+                });
+                html += '</tbody></table>';
+                document.getElementById('tracesContainer').innerHTML = html;
+            } catch (e) {
+                console.error('Failed to load traces', e);
+            }
+        }
+
+        // --- Agent filter ---
+        async function loadAgentFilter() {
+            try {
+                const res = await fetch(`${BASE}/api/registry`);
+                const data = await res.json();
+                const select = document.getElementById('agentFilter');
+                const current = select.value;
+                select.innerHTML = '<option value="">All Agents</option>';
+                data.forEach(a => {
+                    const opt = document.createElement('option');
+                    opt.value = a.name;
+                    opt.textContent = a.name + (a.autoDiscovered ? ' (auto)' : '');
+                    select.appendChild(opt);
+                });
+                select.value = current;
+            } catch (e) {}
+        }
+
+        function toggleDetail(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('open');
+        }
+
+        function parseDuration(d) {
+            if (typeof d === 'number') return d;
+            if (typeof d !== 'string') return 0;
+            // .NET TimeSpan format: "HH:MM:SS.fffffff" or "d.HH:MM:SS.fffffff"
+            const parts = d.split(':');
+            if (parts.length < 3) return 0;
+            const hours = parseFloat(parts[0]) || 0;
+            const mins = parseFloat(parts[1]) || 0;
+            const secs = parseFloat(parts[2]) || 0;
+            return (hours * 3600 + mins * 60 + secs) * 1000;
+        }
+
+        function esc(s) {
+            if (!s) return '';
+            const d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        // --- Refresh Loop ---
+        async function refresh() {
+            await Promise.all([loadMetrics(), loadTraces(), loadAgentFilter()]);
+        }
+
+        function startAutoRefresh() {
+            stopAutoRefresh();
+            refreshTimer = setInterval(refresh, 5000);
+        }
+
+        function stopAutoRefresh() {
+            if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; }
+        }
+
+        document.getElementById('autoRefreshToggle').addEventListener('change', e => {
+            e.target.checked ? startAutoRefresh() : stopAutoRefresh();
+        });
+
+        document.getElementById('agentFilter').addEventListener('change', loadTraces);
+        document.getElementById('limitFilter').addEventListener('change', loadTraces);
+
+        // --- Init ---
+        (async () => {
+            await loadTopology();
+            await refresh();
+            startAutoRefresh();
+        })();
+    </script>
+</body>
+</html>
