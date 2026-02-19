@@ -6,7 +6,7 @@ An observability dashboard for .NET AI agent applications running on Azure App S
 
 ```
 ├── src/Azure.AppService.AgentDashboard/   # The NuGet package
-├── tests/                                  # Package unit tests
+├── tests/                                 # Package unit tests
 └── demo-app/                              # Example: MAF Travel Planner with dashboard integrated
 ```
 
