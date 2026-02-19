@@ -2,6 +2,8 @@
 
 A lightweight observability dashboard for .NET AI agent applications running on Azure App Service. Drop it into any app that uses `IChatClient` from [Microsoft.Extensions.AI](https://www.nuget.org/packages/Microsoft.Extensions.AI) and get real-time visibility into agent performance — no external services required.
 
+![Agent Dashboard](../../docs/images/dashboard-screenshot.png)
+
 ## Why this exists
 
 Multi-agent applications are hard to observe. When you have several agents calling an LLM — potentially in parallel, across phases, or even across processes (e.g., an API + a WebJob) — it's difficult to answer basic questions:

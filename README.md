@@ -2,6 +2,8 @@
 
 An observability dashboard for .NET AI agent applications running on Azure App Service. Instrument your `IChatClient` calls with a single middleware and get a real-time web dashboard showing per-agent metrics, traces, topology, and token usage — no external services required.
 
+![Agent Dashboard](docs/images/dashboard-screenshot.png)
+
 ## Repository structure
 
 ```
