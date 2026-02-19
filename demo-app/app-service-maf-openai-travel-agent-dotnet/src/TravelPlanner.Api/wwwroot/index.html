@@ -646,11 +646,11 @@
             
             const formattedResponse = agentResponse
                 .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold
-                .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic
-                .replace(/^###\s*(.*?)$/gm, '\n<h4 style="color: #555; margin-top: 16px; margin-bottom: 8px;">$1</h4>\n') // H3
-                .replace(/^##\s*(.*?)$/gm, '\n<h3 style="color: #667eea; margin-top: 20px; margin-bottom: 8px;">$1</h3>\n') // H2
-                .replace(/^#\s*(.*?)$/gm, '\n<h2 style="color: #667eea; margin-top: 24px; margin-bottom: 8px;">$1</h2>\n') // H1
-                .replace(/^[-•]\s*(.*?)$/gm, '<li style="margin-bottom: 4px;">$1</li>') // List items
+                .replace(/(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)/g, '<em>$1</em>') // Italic (not bold)
+                .replace(/^\s*###\s+(.*)$/gm, '\n<h4 style="color: #555; margin-top: 16px; margin-bottom: 8px;">$1</h4>\n') // H3
+                .replace(/^\s*##\s+(.*)$/gm, '\n<h3 style="color: #667eea; margin-top: 20px; margin-bottom: 8px;">$1</h3>\n') // H2
+                .replace(/^\s*#\s+(.*)$/gm, '\n<h2 style="color: #667eea; margin-top: 24px; margin-bottom: 8px;">$1</h2>\n') // H1
+                .replace(/^\s*[-•]\s+(.*?)$/gm, '<li style="margin-bottom: 4px;">$1</li>') // List items
                 .replace(/((?:<li[^>]*>.*?<\/li>\s*)+)/g, '<ul style="padding-left: 20px; margin: 8px 0;">$1</ul>') // Wrap lists
                 .replace(/---/g, '<hr style="border: none; border-top: 1px solid #e0e0e0; margin: 16px 0;">') // Rules
                 .replace(/\n{3,}/g, '\n\n') // Collapse excessive newlines
